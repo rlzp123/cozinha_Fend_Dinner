@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cozinha - Dinner by Moonlight 🌙</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        retro: ['"Trebuchet MS"', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#EC4899', // Rosa neon igual ao site principal
+                        dark: '#0f172a',
+                        moon: '#561D86', 
+                        neon: '#111827',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; }
+        .order-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(236, 72, 153, 0.2);
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #EC4899; border-radius: 4px; }
+    </style>
+</head>
+<body class="font-retro bg-gradient-to-b from-slate-900 via-slate-800 to-black text-white min-h-screen">
+
+    <nav class="bg-black/60 backdrop-blur-md shadow-lg fixed top-0 w-full z-50 px-6 py-4 border-b border-primary/20">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-primary tracking-widest flex items-center gap-2">
+                🌙 MOONLIGHT · COZINHA 🍳
+            </h1>
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-gray-400 uppercase hidden md:block tracking-widest animate-pulse">● Monitoramento Ativo</div>
+                <div id="clock" class="text-2xl font-black text-white bg-black/40 px-4 py-1 rounded-xl border border-primary/30">00:00:00</div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-[95rem] mx-auto px-4 pt-28 pb-10">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 h-[calc(100vh-9rem)]">
+            
+            <div class="bg-black/40 backdrop-blur-md rounded-2xl border border-red-500/30 flex flex-col overflow-hidden shadow-2xl">
+                <div class="p-4 bg-red-950/40 border-b border-red-500/30 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-red-400 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-clock animate-pulse"></i> À Espera
+                    </h2>
+                    <span id="count-pending" class="text-xl font-black text-white bg-red-600 px-3 py-0.5 rounded-lg shadow-lg">0</span>
+                </div>
+                <div id="col-pending" class="p-4 space-y-4 overflow-y-auto flex-1 bg-slate-900/20"></div>
+            </div>
+
+            <div class="bg-black/40 backdrop-blur-md rounded-2xl border border-amber-500/30 flex flex-col overflow-hidden shadow-2xl">
+                <div class="p-4 bg-amber-950/40 border-b border-amber-500/30 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-fire-burner animate-bounce"></i> No Fogo
+                    </h2>
+                    <span id="count-preparing" class="text-xl font-black text-white bg-amber-500 px-3 py-0.5 rounded-lg shadow-lg">0</span>
+                </div>
+                <div id="col-preparing" class="p-4 space-y-4 overflow-y-auto flex-1 bg-slate-900/20"></div>
+            </div>
+
+            <div class="bg-black/40 backdrop-blur-md rounded-2xl border border-green-500/30 flex flex-col overflow-hidden shadow-2xl">
+                <div class="p-4 bg-green-950/40 border-b border-green-500/30 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-green-400 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-check-circle"></i> Pronto para Entrega
+                    </h2>
+                    <span id="count-ready" class="text-xl font-black text-white bg-green-600 px-3 py-0.5 rounded-lg shadow-lg">0</span>
+                </div>
+                <div id="col-ready" class="p-4 space-y-4 overflow-y-auto flex-1 bg-slate-900/20"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let orders = [];
+
+        // Atualiza o Relógio Digital
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('pt-BR');
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Puxa e padroniza os dados salvos do site de vendas
+        function carregarPedidos() {
+            const pedidosSalvos = JSON.parse(localStorage.getItem('moonlight_pedidos')) || [];
+            
+            // Mapeia e traduz a estrutura do carrinho para a estrutura interna da cozinha
+            orders = pedidosSalvos.map(p => {
+                let statusTraduzido = 'pending';
+                if (p.status === 'Em Preparo' || p.status === 'preparing') statusTraduzido = 'preparing';
+                if (p.status === 'Pronto' || p.status === 'ready') statusTraduzido = 'ready';
+
+                return {
+                    id: p.id,
+                    cliente: p.cliente || 'Cliente',
+                    table: p.endereco || 'Mesa não informada',
+                    time: p.data || 'Agora',
+                    status: statusTraduzido,
+                    items: (p.itens || []).map(i => ({
+                        name: i.nome,
+                        qty: i.quantidade,
+                        obs: i.obs || ''
+                    }))
+                };
+            });
+        }
+
+        // Salva as alterações de status de volta para manter sincronizado
+        function salvarPedidosNoStorage() {
+            const formatoOriginal = orders.map(o => {
+                let statusPt = 'Pendente';
+                if (o.status === 'preparing') statusPt = 'Em Preparo';
+                if (o.status === 'ready') statusPt = 'Pronto';
+
+                return {
+                    id: o.id,
+                    cliente: o.cliente,
+                    endereco: o.table,
+                    data: o.time,
+                    status: statusPt,
+                    itens: o.items.map(i => ({
+                        nome: i.name,
+                        quantidade: i.qty,
+                        obs: i.obs
+                    }))
+                };
+            });
+            localStorage.setItem('moonlight_pedidos', JSON.stringify(formatoOriginal));
+        }
+
+        // Renderiza a Interface com os cartões correspondentes
+        function renderOrders() {
+            carregarPedidos();
+
+            const cols = {
+                'pending': document.getElementById('col-pending'),
+                'preparing': document.getElementById('col-preparing'),
+                'ready': document.getElementById('col-ready')
+            };
+            
+            // Limpa as colunas antes de recriar
+            Object.values(cols).forEach(col => col.innerHTML = '');
+
+            if (orders.length === 0) {
+                Object.values(cols).forEach(col => {
+                    col.innerHTML = '<p class="text-center text-gray-500 text-sm mt-4 italic">Nenhum pedido nesta fila</p>';
+                });
+                updateStats();
+                return;
+            }
+
+            orders.forEach(order => {
+                const cardHtml = `
+                    <div class="order-card p-5 rounded-xl transition duration-300 hover:border-primary/60 shadow-lg">
+                        <div class="flex justify-between items-start mb-3 border-b border-slate-700/50 Jack pb-3">
+                            <div>
+                                <h3 class="text-lg font-black text-primary uppercase tracking-tight">${order.table}</h3>
+                                <p class="text-sm font-semibold text-gray-200">Cliente: ${order.cliente}</p>
+                                <p class="text-[11px] text-gray-400 mt-0.5">ID: #${order.id} | ${order.time}</p>
+                            </div>
+                        </div>
+
+                        <ul class="space-y-2 mb-5 text-sm">
+                            ${order.items.map(item => `
+                                <li class="bg-slate-900/40 border border-slate-800 p-2.5 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-extrabold text-white text-md">${item.qty}x ${item.name}</span>
+                                        <i class="fas fa-hamburger text-primary/70"></i>
+                                    </div>
+                                    ${item.obs ? `<p class="text-xs text-amber-400 italic mt-1.5 pl-2 border-l-2 border-amber-500">Obs: ${item.obs}</p>` : ''}
+                                </li>
+                            `).join('')}
+                        </ul>
+
+                        <div class="flex gap-2">
+                            ${order.status === 'pending' ? `
+                                <button onclick="updateStatus(${order.id}, 'preparing')" class="w-full bg-primary hover:bg-pink-600 text-white py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 text-sm shadow-lg shadow-pink-500/20">
+                                    <i class="fas fa-fire"></i> PREPARAR AGORA
+                                </button>
+                            ` : ''}
+
+                            ${order.status === 'preparing' ? `
+                                <button onclick="updateStatus(${order.id}, 'ready')" class="w-full bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 text-sm shadow-lg shadow-amber-500/20">
+                                    <i class="fas fa-check"></i> CONCLUÍDO
+                                </button>
+                            ` : ''}
+
+                            ${order.status === 'ready' ? `
+                                <button onclick="removeOrder(${order.id})" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-500/20">
+                                    <i class="fas fa-concierge-bell"></i> ENTREGAR
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                if(cols[order.status]) {
+                    cols[order.status].innerHTML += cardHtml;
+                }
+            });
+
+            updateStats();
+        }
+
+        // Altera o status e atualiza no LocalStorage
+        function updateStatus(id, newStatus) {
+            // Localiza e altera na lista local para persistência rápida
+            const idx = orders.findIndex(o => o.id === id);
+            if (idx !== -1) {
+                orders[idx].status = newStatus;
+                salvarPedidosNoStorage();
+                renderOrders();
+            }
+        }
+
+        // Remove o pedido do sistema ao finalizar a entrega
+        function removeOrder(id) {
+            let pedidosSalvos = JSON.parse(localStorage.getItem('moonlight_pedidos')) || [];
+            pedidosSalvos = pedidosSalvos.filter(p => p.id !== id);
+            localStorage.setItem('moonlight_pedidos', JSON.stringify(pedidosSalvos));
+            renderOrders();
+        }
+
+        // Atualiza os contadores numéricos do topo de cada coluna
+        function updateStats() {
+            document.getElementById('count-pending').innerText = orders.filter(o => o.status === 'pending').length;
+            document.getElementById('count-preparing').innerText = orders.filter(o => o.status === 'preparing').length;
+            document.getElementById('count-ready').innerText = orders.filter(o => o.status === 'ready').length;
+        }
+
+        // Executa ao carregar a página
+        window.addEventListener('DOMContentLoaded', () => {
+            renderOrders();
+            // Verifica se há novos pedidos em segundo plano a cada 3 segundos sem recarregar a página
+            setInterval(renderOrders, 3000);
+        });
+    </script>
+</body>
+</html>
